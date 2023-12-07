@@ -1,30 +1,35 @@
+use clap::Parser;
 use futures::executor::block_on;
-use serde_json;
 use serde::Deserialize;
 use serde::Deserializer;
+use serde_json;
 use std::fmt;
-use clap::Parser;
 
-async fn query(uri: String) -> String{
+async fn query(uri: String) -> String {
     let response = reqwest::get(uri).await.unwrap().text().await.unwrap();
     return response;
 }
 
-fn deserialize_integer<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
+fn deserialize_integer<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<u64>, D::Error> {
     let value = serde_json::Value::deserialize(deserializer)?;
-    let optional_integer = match  value {
+    let optional_integer = match value {
         serde_json::Value::Number(num) => Some(num.as_u64().unwrap()),
         serde_json::Value::String(num_string) => Some(num_string.parse::<u64>().unwrap()),
-        _ => None
+        _ => None,
     };
     Ok(optional_integer)
 }
 
-fn deserialize_float <'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<f64>, D::Error> {
+fn deserialize_float<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<f64>, D::Error> {
     Ok(match serde_json::Value::deserialize(deserializer)? {
-        serde_json::Value::Number(num) => Some(num.as_f64().ok_or(serde::de::Error::custom("Invalid integers"))?),
+        serde_json::Value::Number(num) => Some(
+            num.as_f64()
+                .ok_or(serde::de::Error::custom("Invalid integers"))?,
+        ),
         serde_json::Value::String(num) => Some(num.parse::<f64>().unwrap()),
-        _ => None
+        _ => None,
     })
 }
 
@@ -52,7 +57,7 @@ struct Card {
     // cmc: Option<u64>,
     // color_identity: Vec<String>,
     // #[serde(default)]
-    // colors: Vec<String>, 
+    // colors: Vec<String>,
     #[serde(default)]
     mana_cost: String,
     name: String,
@@ -77,14 +82,24 @@ struct CardCollection {
 
 impl fmt::Display for CardFace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\n{}\n{}\n{}", self.name, self.type_line, self.mana_cost, self.oracle_text).unwrap();
+        write!(
+            f,
+            "{}\n{}\n{}\n{}",
+            self.name, self.type_line, self.mana_cost, self.oracle_text
+        )
+        .unwrap();
         if self.toughness.is_some() && self.power.is_some() {
-            write!(f, "\n{}/{}", self.power.as_ref().unwrap(), self.toughness.as_ref().unwrap()).unwrap();
+            write!(
+                f,
+                "\n{}/{}",
+                self.power.as_ref().unwrap(),
+                self.toughness.as_ref().unwrap()
+            )
+            .unwrap();
         }
         Ok(())
     }
 }
-
 
 fn write_faces(f: &mut fmt::Formatter<'_>, faces: &Vec<CardFace>) -> Result<(), std::io::Error> {
     for face in faces.iter() {
@@ -94,9 +109,20 @@ fn write_faces(f: &mut fmt::Formatter<'_>, faces: &Vec<CardFace>) -> Result<(), 
 }
 
 fn write_normal(f: &mut fmt::Formatter<'_>, card: &Card) -> Result<(), std::io::Error> {
-    write!(f, "{}\n{}\n{}", card.type_line, card.mana_cost, card.oracle_text).unwrap();
+    write!(
+        f,
+        "{}\n{}\n{}",
+        card.type_line, card.mana_cost, card.oracle_text
+    )
+    .unwrap();
     if card.toughness.is_some() && card.power.is_some() {
-        write!(f, "\n{}/{}", card.power.as_ref().unwrap(), card.toughness.as_ref().unwrap()).unwrap();
+        write!(
+            f,
+            "\n{}/{}",
+            card.power.as_ref().unwrap(),
+            card.toughness.as_ref().unwrap()
+        )
+        .unwrap();
     }
     Ok(())
 }
@@ -161,13 +187,15 @@ async fn main() {
     };
 
     match cli.print {
-        Some(print_string) => {
-            match print_string.as_str() {
-                "prices" => println!("{} EUR", sum_prices(cards)),
-                "names" => for card in cards.data.iter() { println!("{}", card.name) },
-                "full" => full_print(),
-                _ => panic!("Unknown print format"),
+        Some(print_string) => match print_string.as_str() {
+            "prices" => println!("{} EUR", sum_prices(cards)),
+            "names" => {
+                for card in cards.data.iter() {
+                    println!("{}", card.name)
+                }
             }
+            "full" => full_print(),
+            _ => panic!("Unknown print format"),
         },
         None => {
             full_print();
