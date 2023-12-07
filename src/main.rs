@@ -87,8 +87,8 @@ impl fmt::Display for Card {
         match self.layout.as_str() {
             "transform" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
             "adventure" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
-            "normal" => write!(f, "{}\n{}", self.mana_cost, self.oracle_text).unwrap(),
-            _ => ()
+            "modal_dfc" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
+            _ => write!(f, "{}\n{}", self.mana_cost, self.oracle_text).unwrap(),
         }
         Ok(())
     }
