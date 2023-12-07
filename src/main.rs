@@ -16,10 +16,18 @@ fn deserialize_integer<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Opt
     })
 }
 
+fn deserialize_float <'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<f64>, D::Error> {
+    Ok(match serde_json::Value::deserialize(deserializer)? {
+        serde_json::Value::Number(num) => Some(num.as_f64().ok_or(serde::de::Error::custom("Invalid integers"))?),
+        serde_json::Value::String(num) => Some(num.parse::<f64>().unwrap()),
+        _ => None
+    })
+}
+
 #[derive(Debug, Deserialize)]
 struct CardPrices {
-    eur: String,
-    usd: String
+    #[serde(deserialize_with = "deserialize_float")]
+    eur: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -28,38 +36,50 @@ struct CardFace {
     type_line: String,
     #[serde(default)]
     oracle_text: String,
+    #[serde(default)]
+    mana_cost: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct Card {
-    artist: String,
-    #[serde(deserialize_with = "deserialize_integer")]
-    cmc: Option<u64>,
-    color_identity: Vec<String>,
+    // #[serde(deserialize_with = "deserialize_integer")]
+    // cmc: Option<u64>,
+    // color_identity: Vec<String>,
+    // #[serde(default)]
+    // colors: Vec<String>, 
     #[serde(default)]
-    colors: Vec<String>, 
+    mana_cost: String,
     name: String,
     layout: String,
     #[serde(default)]
     card_faces: Option<Vec<CardFace>>,
     #[serde(default)]
     oracle_text: String,
+    prices: CardPrices,
 }
 
 #[derive(Debug, Deserialize)]
 struct CardCollection {
     #[serde(deserialize_with = "deserialize_integer", default)]
     total_cards: Option<u64>,
-    object: String,
     data: Vec<Card>
+}
+
+impl fmt::Display for CardFace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}\n{}\n{}\n{}\n", self.name, self.mana_cost, self.type_line, self.oracle_text).unwrap();
+        Ok(())
+    }
 }
 
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}\n", self.name).unwrap();
-        match(self.layout.as_str()) {
-            "transform" => write!(f, "{:?}\n", self.card_faces).unwrap(),
-            "normal" => write!(f, "{}", self.oracle_text).unwrap(),
+        match self.layout.as_str() {
+            "transform" => for face in self.card_faces.as_ref().unwrap() {
+                write!(f, "{}", face).unwrap()
+            },
+            "normal" => write!(f, "{}\n{}", self.mana_cost, self.oracle_text).unwrap(),
             _ => ()
         }
         write!(f, "\n\n").unwrap();
@@ -79,6 +99,16 @@ impl fmt::Display for CardCollection {
     }
 }
 
+fn sum_prices(collection: CardCollection) -> f64 {
+    let mut sum: f64 = 0.0;
+
+    for card in collection.data.iter() {
+        sum += card.prices.eur.unwrap_or_default();
+    }
+
+    sum
+}
+
 #[tokio::main]
 async fn main() {
     let mut scryfall_uri: String = "https://api.scryfall.com/cards/search?q=".to_owned();
@@ -91,4 +121,6 @@ async fn main() {
     let cards: CardCollection = serde_json::from_str(&response).expect("JSON format error");
 
     println!("{}", cards);
+
+    println!("{} EUR", sum_prices(cards));
 }
