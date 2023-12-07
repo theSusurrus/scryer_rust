@@ -11,9 +11,7 @@ async fn query(uri: String) -> String{
 
 fn deserialize_integer<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
     Ok(match serde_json::Value::deserialize(deserializer)? {
-        // serde_json::Value::String(s) => s.parse().map_err(serde::de::Error::custom)?,
         serde_json::Value::Number(num) => Some(num.as_f64().ok_or(serde::de::Error::custom("Invalid integers"))? as u64),
-        // _ => return Err(serde::de::Error::custom("wrong type"))
         _ => None
     })
 }
@@ -25,6 +23,14 @@ struct CardPrices {
 }
 
 #[derive(Debug, Deserialize)]
+struct CardFace {
+    name: String,
+    type_line: String,
+    #[serde(default)]
+    oracle_text: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct Card {
     artist: String,
     #[serde(deserialize_with = "deserialize_integer")]
@@ -33,16 +39,11 @@ struct Card {
     #[serde(default)]
     colors: Vec<String>, 
     name: String,
-    // keywords: Vec<String>,
-    // mana_cost: String,
-    // #[serde(deserialize_with = "deserialize_integer")]
-    // power: Option<u64>,
-    // #[serde(deserialize_with = "deserialize_integer")]
-    // toughness: Option<u64>,
-    // rarity: String,
-    // set_name: String,
-    // type_line: String,
-    // prices: CardPrices,
+    layout: String,
+    #[serde(default)]
+    card_faces: Option<Vec<CardFace>>,
+    #[serde(default)]
+    oracle_text: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,11 +54,15 @@ struct CardCollection {
     data: Vec<Card>
 }
 
-
-
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}\n", self.name).unwrap();
+        match(self.layout.as_str()) {
+            "transform" => write!(f, "{:?}\n", self.card_faces).unwrap(),
+            "normal" => write!(f, "{}", self.oracle_text).unwrap(),
+            _ => ()
+        }
+        write!(f, "\n\n").unwrap();
         Ok(())
     }
 }
@@ -83,10 +88,7 @@ async fn main() {
 
     let response = block_on(query(scryfall_uri));
 
-    println!("{}", response);
-
     let cards: CardCollection = serde_json::from_str(&response).expect("JSON format error");
 
-    println!("{:?}", cards);
     println!("{}", cards);
 }
