@@ -67,32 +67,38 @@ struct CardCollection {
 
 impl fmt::Display for CardFace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\n{}\n{}\n{}\n", self.name, self.mana_cost, self.type_line, self.oracle_text).unwrap();
+        write!(f, "{}\n{}\n{}\n{}", self.name, self.mana_cost, self.type_line, self.oracle_text).unwrap();
         Ok(())
     }
+}
+
+
+fn write_faces(f: &mut fmt::Formatter<'_>, faces: &Vec<CardFace>) -> Result<(), std::io::Error> {
+    for face in faces.iter() {
+        write!(f, "{}\n", face).unwrap();
+    }
+    Ok(())
 }
 
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}\n", self.name).unwrap();
         match self.layout.as_str() {
-            "transform" => for face in self.card_faces.as_ref().unwrap() {
-                write!(f, "{}", face).unwrap()
-            },
+            "transform" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
+            "adventure" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
             "normal" => write!(f, "{}\n{}", self.mana_cost, self.oracle_text).unwrap(),
             _ => ()
         }
-        write!(f, "\n\n").unwrap();
         Ok(())
     }
 }
 
 impl fmt::Display for CardCollection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} cards\n", self.total_cards.unwrap_or_default()).unwrap();
+        write!(f, "{} cards\n\n", self.total_cards.unwrap_or_default()).unwrap();
 
         for card in self.data.iter() {
-            write!(f, "{}", card).unwrap();
+            write!(f, "{}\n\n", card).unwrap();
         }
 
         Ok(())
@@ -112,7 +118,7 @@ fn sum_prices(collection: CardCollection) -> f64 {
 #[tokio::main]
 async fn main() {
     let mut scryfall_uri: String = "https://api.scryfall.com/cards/search?q=".to_owned();
-    let scryfall_query: &str = "set:lci";
+    let scryfall_query: &str = "Kellan";
 
     scryfall_uri.push_str(scryfall_query);
 
