@@ -3,7 +3,7 @@ use serde_json;
 use serde::Deserialize;
 use serde::Deserializer;
 use std::fmt;
-use clap::{Parser};
+use clap::Parser;
 
 async fn query(uri: String) -> String{
     let response = reqwest::get(uri).await.unwrap().text().await.unwrap();
@@ -28,13 +28,13 @@ fn deserialize_float <'de, D: Deserializer<'de>>(deserializer: D) -> Result<Opti
     })
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct CardPrices {
     #[serde(deserialize_with = "deserialize_float")]
     eur: Option<f64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct CardFace {
     name: String,
     type_line: String,
@@ -46,7 +46,7 @@ struct CardFace {
     toughness: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct Card {
     // #[serde(deserialize_with = "deserialize_integer")]
     // cmc: Option<u64>,
@@ -67,7 +67,7 @@ struct Card {
     toughness: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct CardCollection {
     #[serde(deserialize_with = "deserialize_integer", default)]
     total_cards: Option<u64>,
@@ -138,7 +138,8 @@ fn sum_prices(collection: CardCollection) -> f64 {
 
 #[derive(Parser)]
 struct Cli {
-    query: String
+    query: String,
+    print: Option<String>,
 }
 
 #[tokio::main]
@@ -153,7 +154,23 @@ async fn main() {
 
     let cards: CardCollection = serde_json::from_str(&response).expect("JSON format error");
 
-    println!("{}", cards);
+    let cards_clone = cards.clone();
+    let full_print = || {
+        println!("{}", cards_clone);
+        println!("{} EUR", sum_prices(cards_clone));
+    };
 
-    println!("{} EUR", sum_prices(cards));
+    match cli.print {
+        Some(print_string) => {
+            match print_string.as_str() {
+                "prices" => println!("{} EUR", sum_prices(cards)),
+                "names" => for card in cards.data.iter() { println!("{}", card.name) },
+                "full" => full_print(),
+                _ => panic!("Unknown print format"),
+            }
+        },
+        None => {
+            full_print();
+        }
+    }
 }
