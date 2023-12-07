@@ -3,6 +3,7 @@ use serde_json;
 use serde::Deserialize;
 use serde::Deserializer;
 use std::fmt;
+use clap::{Parser};
 
 async fn query(uri: String) -> String{
     let response = reqwest::get(uri).await.unwrap().text().await.unwrap();
@@ -115,12 +116,18 @@ fn sum_prices(collection: CardCollection) -> f64 {
     sum
 }
 
+#[derive(Parser)]
+struct Cli {
+    query: String
+}
+
 #[tokio::main]
 async fn main() {
     let mut scryfall_uri: String = "https://api.scryfall.com/cards/search?q=".to_owned();
-    let scryfall_query: &str = "Kellan";
 
-    scryfall_uri.push_str(scryfall_query);
+    let cli = Cli::parse();
+
+    scryfall_uri.push_str(cli.query.as_str());
 
     let response = block_on(query(scryfall_uri));
 
