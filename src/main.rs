@@ -57,20 +57,17 @@ struct CardCollection {
 
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\n", self.name);
+        write!(f, "{}\n", self.name).unwrap();
         Ok(())
     }
 }
 
 impl fmt::Display for CardCollection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match (self.total_cards) {
-            Some(total_cards) => write!(f, "{} cards\n", total_cards),
-            None => Ok(())
-        };
+        write!(f, "{} cards\n", self.total_cards.unwrap_or_default()).unwrap();
 
         for card in self.data.iter() {
-            write!(f, "{}", card);
+            write!(f, "{}", card).unwrap();
         }
 
         Ok(())
