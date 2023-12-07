@@ -11,10 +11,13 @@ async fn query(uri: String) -> String{
 }
 
 fn deserialize_integer<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
-    Ok(match serde_json::Value::deserialize(deserializer)? {
-        serde_json::Value::Number(num) => Some(num.as_f64().ok_or(serde::de::Error::custom("Invalid integers"))? as u64),
+    let value = serde_json::Value::deserialize(deserializer)?;
+    let optional_integer = match  value {
+        serde_json::Value::Number(num) => Some(num.as_u64().unwrap()),
+        serde_json::Value::String(num_string) => Some(num_string.parse::<u64>().unwrap()),
         _ => None
-    })
+    };
+    Ok(optional_integer)
 }
 
 fn deserialize_float <'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<f64>, D::Error> {
@@ -39,6 +42,8 @@ struct CardFace {
     oracle_text: String,
     #[serde(default)]
     mana_cost: String,
+    power: Option<String>,
+    toughness: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -51,24 +56,31 @@ struct Card {
     #[serde(default)]
     mana_cost: String,
     name: String,
+    type_line: String,
     layout: String,
     #[serde(default)]
     card_faces: Option<Vec<CardFace>>,
     #[serde(default)]
     oracle_text: String,
     prices: CardPrices,
+    power: Option<String>,
+    toughness: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct CardCollection {
     #[serde(deserialize_with = "deserialize_integer", default)]
     total_cards: Option<u64>,
-    data: Vec<Card>
+    data: Vec<Card>,
+    has_more: bool,
 }
 
 impl fmt::Display for CardFace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\n{}\n{}\n{}", self.name, self.mana_cost, self.type_line, self.oracle_text).unwrap();
+        write!(f, "{}\n{}\n{}\n{}", self.name, self.type_line, self.mana_cost, self.oracle_text).unwrap();
+        if self.toughness.is_some() && self.power.is_some() {
+            write!(f, "\n{}/{}", self.power.as_ref().unwrap(), self.toughness.as_ref().unwrap()).unwrap();
+        }
         Ok(())
     }
 }
@@ -81,6 +93,14 @@ fn write_faces(f: &mut fmt::Formatter<'_>, faces: &Vec<CardFace>) -> Result<(), 
     Ok(())
 }
 
+fn write_normal(f: &mut fmt::Formatter<'_>, card: &Card) -> Result<(), std::io::Error> {
+    write!(f, "{}\n{}\n{}", card.type_line, card.mana_cost, card.oracle_text).unwrap();
+    if card.toughness.is_some() && card.power.is_some() {
+        write!(f, "\n{}/{}", card.power.as_ref().unwrap(), card.toughness.as_ref().unwrap()).unwrap();
+    }
+    Ok(())
+}
+
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}\n", self.name).unwrap();
@@ -88,7 +108,7 @@ impl fmt::Display for Card {
             "transform" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
             "adventure" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
             "modal_dfc" => write_faces(f, self.card_faces.as_ref().unwrap()).unwrap(),
-            _ => write!(f, "{}\n{}", self.mana_cost, self.oracle_text).unwrap(),
+            _ => write_normal(f, self).unwrap(),
         }
         Ok(())
     }
