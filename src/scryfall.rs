@@ -44,6 +44,27 @@ pub struct CardFace {
     toughness: Option<String>,
 }
 
+impl fmt::Display for CardFace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}\n{}\n{}\n{}",
+            self.name, self.type_line, self.mana_cost, self.oracle_text
+        )
+        .unwrap();
+        if self.toughness.is_some() && self.power.is_some() {
+            write!(
+                f,
+                "\n{}/{}",
+                self.power.as_ref().unwrap(),
+                self.toughness.as_ref().unwrap()
+            )
+            .unwrap();
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Card {
     // #[serde(deserialize_with = "deserialize_integer")]
@@ -69,42 +90,6 @@ impl Card {
     pub fn get_name(&self) -> String {
         let card_clone = self.clone();
         card_clone.name
-    }
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct CardCollection {
-    #[serde(deserialize_with = "deserialize_integer", default)]
-    total_cards: Option<u64>,
-    data: Vec<Card>,
-    has_more: bool,
-}
-
-impl CardCollection {
-    pub fn get_cards(&self) -> Vec<Card> {
-        let data_clone = self.data.clone();
-        data_clone
-    }
-}
-
-impl fmt::Display for CardFace {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}\n{}\n{}\n{}",
-            self.name, self.type_line, self.mana_cost, self.oracle_text
-        )
-        .unwrap();
-        if self.toughness.is_some() && self.power.is_some() {
-            write!(
-                f,
-                "\n{}/{}",
-                self.power.as_ref().unwrap(),
-                self.toughness.as_ref().unwrap()
-            )
-            .unwrap();
-        }
-        Ok(())
     }
 }
 
@@ -147,6 +132,31 @@ impl fmt::Display for Card {
     }
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct CardCollection {
+    #[serde(deserialize_with = "deserialize_integer", default)]
+    total_cards: Option<u64>,
+    data: Vec<Card>,
+    has_more: bool,
+}
+
+impl CardCollection {
+    pub fn get_cards(&self) -> Vec<Card> {
+        let data_clone = self.data.clone();
+        data_clone
+    }
+
+    pub fn sum_prices(&self) -> f64 {
+        let mut sum: f64 = 0.0;
+    
+        for card in self.data.iter() {
+            sum += card.prices.eur.unwrap_or_default();
+        }
+    
+        sum
+    }
+}
+
 impl fmt::Display for CardCollection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} cards\n\n", self.total_cards.unwrap_or_default()).unwrap();
@@ -157,14 +167,4 @@ impl fmt::Display for CardCollection {
 
         Ok(())
     }
-}
-
-pub fn sum_prices(collection: CardCollection) -> f64 {
-    let mut sum: f64 = 0.0;
-
-    for card in collection.data.iter() {
-        sum += card.prices.eur.unwrap_or_default();
-    }
-
-    sum
 }

@@ -26,12 +26,12 @@ async fn main() {
     let cards_clone = cards.clone();
     let full_print = || {
         println!("{}", cards_clone);
-        println!("{} EUR", scryfall::sum_prices(cards_clone));
+        println!("{} EUR", cards_clone.sum_prices());
     };
 
     match cli.print {
         Some(print_string) => match print_string.as_str() {
-            "prices" => println!("{} EUR", scryfall::sum_prices(cards)),
+            "prices" => println!("{} EUR", cards.sum_prices()),
             "names" => {
                 for card in cards.get_cards().iter() {
                     println!("{}", card.get_name())
