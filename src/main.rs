@@ -5,22 +5,15 @@ mod scryfall;
 
 #[derive(Parser)]
 struct Cli {
-    get_http: String,
+    query: String,
     print: Option<String>,
 }
 
 #[tokio::main]
 async fn main() {
-    let mut scryfall_uri: String = "https://api.scryfall.com/cards/search?q=".to_owned();
-
     let cli = Cli::parse();
 
-    scryfall_uri.push_str(cli.get_http.as_str());
-
-    let response = http_handling::get_http(scryfall_uri);
-
-    let cards: scryfall::CardCollection =
-        serde_json::from_str(&response).expect("JSON format error");
+    let cards = scryfall::query(&cli.query.as_str()).unwrap();
 
     let cards_clone = cards.clone();
     let full_print = || {

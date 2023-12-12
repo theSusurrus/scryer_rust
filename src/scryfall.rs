@@ -171,7 +171,7 @@ impl fmt::Display for CardCollection {
     }
 }
 
-pub fn query_scryfall(query: &str) -> Result<CardCollection, ()> {
+pub fn query(query: &str) -> Result<CardCollection, ()> {
     let mut scryfall_uri: String = "https://api.scryfall.com/cards/search?q=".to_owned();
 
     scryfall_uri.push_str(query);
