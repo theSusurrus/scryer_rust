@@ -1,12 +1,11 @@
 use clap::Parser;
-use futures::executor::block_on;
 
 mod http_handling;
 mod scryfall;
 
 #[derive(Parser)]
 struct Cli {
-    query: String,
+    get_http: String,
     print: Option<String>,
 }
 
@@ -16,9 +15,9 @@ async fn main() {
 
     let cli = Cli::parse();
 
-    scryfall_uri.push_str(cli.query.as_str());
+    scryfall_uri.push_str(cli.get_http.as_str());
 
-    let response = block_on(http_handling::query(scryfall_uri));
+    let response = http_handling::get_http(scryfall_uri);
 
     let cards: scryfall::CardCollection =
         serde_json::from_str(&response).expect("JSON format error");

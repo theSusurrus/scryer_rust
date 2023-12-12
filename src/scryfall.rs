@@ -1,7 +1,9 @@
+use clap::Error;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde_json;
 use std::fmt;
+use crate::http_handling as http_handling;
 
 fn deserialize_integer<'de, D: Deserializer<'de>>(
     deserializer: D,
@@ -167,4 +169,17 @@ impl fmt::Display for CardCollection {
 
         Ok(())
     }
+}
+
+pub fn query_scryfall(query: &str) -> Result<CardCollection, ()> {
+    let mut scryfall_uri: String = "https://api.scryfall.com/cards/search?q=".to_owned();
+
+    scryfall_uri.push_str(query);
+
+    let response = http_handling::get_http(scryfall_uri);
+
+    let cards: CardCollection =
+        serde_json::from_str(&response).expect("JSON format error");
+
+    Ok(cards)
 }
