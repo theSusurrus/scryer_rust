@@ -2,7 +2,7 @@ use crate::http_handling;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde_json;
-use std::fmt;
+use std::{time, fmt};
 
 fn deserialize_integer<'de, D: Deserializer<'de>>(
     deserializer: D,
@@ -187,6 +187,9 @@ pub fn query(query: &str) -> Result<CardCollection, ()> {
     let mut cards: CardCollection = serde_json::from_str(&response).expect("JSON format error");
 
     while cards.next_page.is_some() {
+        /* rate limiting */
+        let _ = tokio::time::sleep(time::Duration::from_millis(100));
+
         let response = http_handling::get_http(cards.next_page.as_ref().unwrap().as_str());
         let more_cards: CardCollection =
             serde_json::from_str(&response).expect("JSON format error");
