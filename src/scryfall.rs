@@ -1,8 +1,8 @@
+use crate::http_handling;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde_json;
 use std::fmt;
-use crate::http_handling as http_handling;
 
 fn deserialize_integer<'de, D: Deserializer<'de>>(
     deserializer: D,
@@ -150,11 +150,11 @@ impl CardCollection {
 
     pub fn sum_prices(&self) -> f64 {
         let mut sum: f64 = 0.0;
-    
+
         for card in self.data.iter() {
             sum += card.prices.eur.unwrap_or_default();
         }
-    
+
         sum
     }
 
@@ -184,12 +184,11 @@ pub fn query(query: &str) -> Result<CardCollection, ()> {
 
     let response = http_handling::get_http(scryfall_uri.as_str());
 
-    let mut cards: CardCollection =
-        serde_json::from_str(&response).expect("JSON format error");
+    let mut cards: CardCollection = serde_json::from_str(&response).expect("JSON format error");
 
     while cards.next_page.is_some() {
         let response = http_handling::get_http(cards.next_page.as_ref().unwrap().as_str());
-        let more_cards: CardCollection = 
+        let more_cards: CardCollection =
             serde_json::from_str(&response).expect("JSON format error");
         cards.append(more_cards);
     }
