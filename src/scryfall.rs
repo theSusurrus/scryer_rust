@@ -1,4 +1,3 @@
-use clap::Error;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde_json;
@@ -136,10 +135,11 @@ impl fmt::Display for Card {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct CardCollection {
+    /* total_cards counts cards in next_pages */
     #[serde(deserialize_with = "deserialize_integer", default)]
     total_cards: Option<u64>,
     data: Vec<Card>,
-    has_more: bool,
+    next_page: Option<String>,
 }
 
 impl CardCollection {
@@ -156,6 +156,12 @@ impl CardCollection {
         }
     
         sum
+    }
+
+    pub fn append(&mut self, more: CardCollection) {
+        self.next_page = more.next_page;
+        let mut more_data = more.data.clone();
+        self.data.append(&mut more_data);
     }
 }
 
@@ -176,10 +182,17 @@ pub fn query(query: &str) -> Result<CardCollection, ()> {
 
     scryfall_uri.push_str(query);
 
-    let response = http_handling::get_http(scryfall_uri);
+    let response = http_handling::get_http(scryfall_uri.as_str());
 
-    let cards: CardCollection =
+    let mut cards: CardCollection =
         serde_json::from_str(&response).expect("JSON format error");
+
+    while cards.next_page.is_some() {
+        let response = http_handling::get_http(cards.next_page.as_ref().unwrap().as_str());
+        let more_cards: CardCollection = 
+            serde_json::from_str(&response).expect("JSON format error");
+        cards.append(more_cards);
+    }
 
     Ok(cards)
 }
